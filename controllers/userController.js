@@ -53,24 +53,65 @@ exports.updateProfile = asyncErrorHandler(async (req, res, next) => {
   });
 });
 
+// exports.getProfile = asyncErrorHandler(async (req, res, next) => {
+//   //i can add some user control setting here. eg., user can choose to show their profile to public or not
+//   // and show the followers or not
+//   const { username } = req.params;
+//   const profile = await Profile.findOne({ username }).populate(
+//     'account_id',
+//     'id'
+//   );
+//   if (!profile) {
+//     const error = new CustomError('Profile not found', 404);
+//     return next(error);
+//   }
+//   let isFollowing = false;
+//   const isOwnProfile = profile.account_id.id === req.account_id;
+//   if (!isOwnProfile) {
+//     //if not own profile, then check if the user is following the profile
+//     const userProfile = await Profile.findOne({ account_id: req.account_id });
+//     isFollowing = userProfile.following.includes(profile.id);
+//     //filter post of the profile punlic and friends 
+//     //if not following, then only show public post
+//     //if following, then show public and friends post
+//     //if own profile, then show all post
+
+//   }
+//   res.status(200).json({
+//     success: true,
+//     profile: {
+//       ...profile.toObject(),
+//       isOwnProfile,
+//       isFollowing,
+//     },
+//   });
+// });
 exports.getProfile = asyncErrorHandler(async (req, res, next) => {
-  //i can add some user control setting here. eg., user can choose to show their profile to public or not
-  // and show the followers or not
   const { username } = req.params;
   const profile = await Profile.findOne({ username }).populate(
     'account_id',
     'id'
-  );
+  ).select('-posts'); // Added a closing parentheses here
   if (!profile) {
     const error = new CustomError('Profile not found', 404);
     return next(error);
   }
   let isFollowing = false;
   const isOwnProfile = profile.account_id.id === req.account_id;
-  if (!isOwnProfile) {
-    //if not own profile, then check if the user is following the profile
+  let posts = [];
+  if (isOwnProfile) {
+    // If own profile, filter for friends and public posts
+    posts = await Post.find({ author: profile.id, visibility: { $in: ['public', 'friends'] } });
+  } else {
     const userProfile = await Profile.findOne({ account_id: req.account_id });
     isFollowing = userProfile.following.includes(profile.id);
+    if (isFollowing) {
+      // If following, show public and friends posts
+      posts = await Post.find({ author: profile.id, visibility: { $in: ['public', 'friends'] } });
+    } else {
+      // If not following, only show public posts
+      posts = await Post.find({ author: profile.id, visibility: 'public' });
+    }
   }
   res.status(200).json({
     success: true,
@@ -79,6 +120,7 @@ exports.getProfile = asyncErrorHandler(async (req, res, next) => {
       isOwnProfile,
       isFollowing,
     },
+    posts,
   });
 });
 

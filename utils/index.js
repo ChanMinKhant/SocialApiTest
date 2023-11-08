@@ -99,6 +99,9 @@ exports.forgotPasswordEmailTemplate = (token) => {
 };
 
 exports.sendEmail = async (option) => {
+  if (!option.email) {
+    throw new Error('Recipient email is not defined');
+  }
   const transporter = nodemailer.createTransport({
     service: process.env.EMAIL_SERVICE || 'gmail',
     auth: {

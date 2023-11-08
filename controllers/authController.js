@@ -58,14 +58,17 @@ exports.register = asyncErrorHandler(async (req, res, next) => {
     const err = new CustomError('Something went wrong', 500);
     return next(err);
   }
+  console.log('here');
   try {
+    console.log('here');
     sendEmail({
       email: user.email,
       subject: 'Verify Your Email',
       message,
     });
+    console.log('here');
   } catch (error) {
-    console.log(error);
+    console.log('here');
     //must clear verification token
     await user.deleteOne();
     await verification.deleteOne();
